@@ -1,0 +1,187 @@
+﻿@model ObiletCase.Models.ViewModels.IndexViewModel
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+<link href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css" rel="stylesheet">
+
+<style>
+    body {
+        font-size: 1.2rem;
+    }
+
+    .custom-card {
+        border-radius: 10px;
+        border: none;
+        box-shadow: 0 0 15px rgba(0,0,0,0.1);
+        padding: 2rem;
+    }
+
+    .swap-btn-wrapper {
+        position: relative;
+        height: 0;
+    }
+
+    .swap-btn {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        top: -5px;
+        z-index: 10;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        border: 1px solid #ccc;
+        background-color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .btn-search {
+        background-color: #1743a3;
+        color: white;
+        font-weight: 600;
+        font-size: 18px;
+        padding: 12px;
+    }
+
+        .btn-search:hover {
+            background-color: #0e2b6c;
+        }
+</style>
+
+<div class="container mt-5">
+    <div class="card custom-card mx-auto" style="max-width: 500px;">
+        <form asp-action="Search" asp-controller="Home" method="post" onsubmit="return validateForm()">
+            <div class="mb-3">
+                <label for="OriginText" class="form-label">Nereden</label>
+                <input id="OriginText" class="form-control" name="OriginText" placeholder="Şehir adı yazın..." />
+                <input type="hidden" id="SelectedOriginId" name="SelectedOriginId" />
+            </div>
+
+            <div class="swap-btn-wrapper">
+                <button type="button" id="swapButton" class="swap-btn" title="Yer değiştir">
+                    <i class="bi bi-arrow-down-up"></i>
+                </button>
+            </div>
+
+            <div class="mb-3 mt-4">
+                <label for="DestinationText" class="form-label">Nereye</label>
+                <input id="DestinationText" class="form-control" name="DestinationText" placeholder="Şehir adı yazın..." />
+                <input type="hidden" id="SelectedDestinationId" name="SelectedDestinationId" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Tarih</label>
+                <div class="input-group mb-2">
+                    <input type="date" class="form-control" id="DepartureDate" asp-for="DepartureDate" onchange="localStorage.setItem('departure', this.value);" />
+                    <button type="button" class="btn btn-outline-dark" onclick="setToday()">Bugün</button>
+                    <button type="button" class="btn btn-outline-dark" onclick="setTomorrow()">Yarın</button>
+                </div>
+            </div>
+
+            <div class="d-grid mt-4">
+                <button type="submit" class="btn btn-search">Bileti Bul</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.js"></script>
+
+    <script>
+        const originIdInput = document.getElementById("SelectedOriginId");
+        const destinationIdInput = document.getElementById("SelectedDestinationId");
+        const departure = document.getElementById("DepartureDate");
+
+        $(function () {
+            const $originText = $("#OriginText");
+            const $destinationText = $("#DestinationText");
+
+            $originText.autocomplete({ // kalkış noktası için autocomplete
+                source: function (request, response) {
+                    $.getJSON("/api/locations", { query: request.term }, function (data) {
+                        response(data);
+                    });
+                },
+                select: function (event, ui) {
+                    originIdInput.value = ui.item.id;
+                    $originText.val(ui.item.label);
+                    localStorage.setItem("originId", ui.item.id);
+                    localStorage.setItem("originLabel", ui.item.label);
+                    return false;
+                },
+                minLength: 2
+            });
+
+            $destinationText.autocomplete({ // varış noktası için autocomplete
+                source: function (request, response) {
+                    $.getJSON("/api/locations", { query: request.term }, function (data) {
+                        response(data);
+                    });
+                },
+                select: function (event, ui) {
+                    destinationIdInput.value = ui.item.id;
+                    $destinationText.val(ui.item.label);
+                    localStorage.setItem("destinationId", ui.item.id); // varış noktası IDsini localStoragea kaydet
+                    localStorage.setItem("destinationLabel", ui.item.label); // varış noktası labelını localStoraga kaydet
+                    return false;
+                },
+                minLength: 2
+            });
+
+            if (localStorage.getItem("originId")) { // sayfa yüklendiğinde local verileri kontrol et
+                originIdInput.value = localStorage.getItem("originId");
+                $originText.val(localStorage.getItem("originLabel"));
+            }
+            if (localStorage.getItem("destinationId")) {
+                destinationIdInput.value = localStorage.getItem("destinationId");
+                $destinationText.val(localStorage.getItem("destinationLabel"));
+            }
+            if (localStorage.getItem("departure")) {
+                departure.value = localStorage.getItem("departure");
+            }
+        });
+
+        document.getElementById("swapButton").addEventListener("click", () => { // kalkış ve varış yerlerini değiştir
+            const tempId = originIdInput.value;
+            const tempText = $("#OriginText").val();
+
+            originIdInput.value = destinationIdInput.value;
+            $("#OriginText").val($("#DestinationText").val());
+
+            destinationIdInput.value = tempId;
+            $("#DestinationText").val(tempText);
+        });
+
+        function setToday() {
+            const today = new Date().toISOString().split('T')[0];
+            departure.value = today;
+            localStorage.setItem("departure", today);
+        }
+
+        function setTomorrow() {
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const value = tomorrow.toISOString().split('T')[0];
+            departure.value = value;
+            localStorage.setItem("departure", value);
+        }
+
+        function validateForm() {
+            if (!originIdInput.value || !destinationIdInput.value || !departure.value) {
+                alert("Lütfen tüm alanları doldurun.");
+                return false;
+            }
+            if (originIdInput.value === destinationIdInput.value) {
+                alert("Kalkış ve varış noktaları aynı olamaz.");
+                return false;
+            }
+            return true;
+        }
+    </script>
+}
