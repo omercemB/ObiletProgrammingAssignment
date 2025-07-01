@@ -76,7 +76,7 @@
             <div class="mb-3">
                 <label class="form-label">Tarih</label>
                 <div class="input-group mb-2">
-                    <input type="date" class="form-control" id="DepartureDate" asp-for="DepartureDate" onchange="localStorage.setItem('departure', this.value);" />
+                    <input type="date" class="form-control" id="DepartureDate" asp-for="DepartureDate" onchange="localStorage.setItem('departure', this.value);" min="@DateTime.Today.ToString("yyyy-MM-dd")" />
                     <button type="button" class="btn btn-outline-dark" onclick="setToday()">Bugün</button>
                     <button type="button" class="btn btn-outline-dark" onclick="setTomorrow()">Yarın</button>
                 </div>
@@ -156,6 +156,11 @@
 
             destinationIdInput.value = tempId;
             $("#DestinationText").val(tempText);
+
+            localStorage.setItem("originId", originIdInput.value);
+            localStorage.setItem("originLabel", $("#OriginText").val());
+            localStorage.setItem("destinationId", destinationIdInput.value);
+            localStorage.setItem("destinationLabel", $("#DestinationText").val());
         });
 
         function setToday() {
